@@ -1,9 +1,11 @@
 'use client'
 
+import { useState, useRef, useEffect, useTransition } from 'react'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { VerticalBadge } from '@/components/ui/Badge'
 import { IcSparkle, IcMore, IcClock, IcCalendar } from '@/components/ui/Icons'
+import { deleteDeal } from '@/lib/actions'
 import type { Deal } from '@/lib/supabase/database.types'
 
 interface Props {
@@ -14,6 +16,9 @@ interface Props {
 
 export default function DealCard({ deal, isDragging, isDragOverlay }: Props) {
   const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: deal.id })
+  const [menuOpen, setMenuOpen] = useState(false)
+  const [isPending, startTransition] = useTransition()
+  const menuRef = useRef<HTMLDivElement>(null)
 
   const style = isDragOverlay
     ? undefined
@@ -22,11 +27,28 @@ export default function DealCard({ deal, isDragging, isDragOverlay }: Props) {
         transition,
       }
 
+  useEffect(() => {
+    if (!menuOpen) return
+    const handler = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setMenuOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [menuOpen])
+
   const fmt = (v: number) =>
     v >= 1_000_000 ? `€${(v / 1_000_000).toFixed(2)}M` : `€${(v / 1000).toFixed(0)}K`
 
   const isHot = deal.stage === 'closing' && deal.value >= 200_000
   const ageDays = Math.floor((Date.now() - new Date(deal.created_at).getTime()) / 86_400_000)
+
+  function handleDelete() {
+    setMenuOpen(false)
+    if (!confirm(`¿Eliminar "${deal.title}"?`)) return
+    startTransition(() => deleteDeal(deal.id))
+  }
 
   return (
     <div
@@ -44,13 +66,43 @@ export default function DealCard({ deal, isDragging, isDragOverlay }: Props) {
             <IcSparkle size={10} /> Hot
           </span>
         )}
-        <button
-          className="icon-btn"
-          style={{ width: 22, height: 22, marginLeft: 'auto', borderColor: 'transparent', background: 'transparent' }}
-          onPointerDown={(e) => e.stopPropagation()}
-        >
-          <IcMore size={14} />
-        </button>
+
+        {/* ··· menu */}
+        <div ref={menuRef} style={{ marginLeft: 'auto', position: 'relative' }}>
+          <button
+            className="icon-btn"
+            style={{ width: 22, height: 22, borderColor: 'transparent', background: 'transparent' }}
+            onPointerDown={(e) => e.stopPropagation()}
+            onClick={(e) => { e.stopPropagation(); setMenuOpen((o) => !o) }}
+          >
+            <IcMore size={14} />
+          </button>
+
+          {menuOpen && (
+            <div style={{
+              position: 'absolute', right: 0, top: '110%', zIndex: 50,
+              background: 'var(--surface-2)', border: '1px solid var(--border)',
+              borderRadius: 10, padding: '4px 0', minWidth: 140,
+              boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
+            }}>
+              <button
+                disabled={isPending}
+                onPointerDown={(e) => e.stopPropagation()}
+                onClick={(e) => { e.stopPropagation(); handleDelete() }}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 8,
+                  width: '100%', padding: '8px 14px',
+                  background: 'none', border: 'none', cursor: 'pointer',
+                  color: '#ff6b6b', fontSize: 13, textAlign: 'left',
+                }}
+                onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(255,107,107,0.08)')}
+                onMouseLeave={(e) => (e.currentTarget.style.background = 'none')}
+              >
+                {isPending ? 'Eliminando…' : '🗑 Eliminar deal'}
+              </button>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Title + company */}
