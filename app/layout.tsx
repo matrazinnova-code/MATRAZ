@@ -11,12 +11,14 @@ const inter = Inter({
 export const metadata: Metadata = {
   title: 'Matraz Innova — CRM',
   description: 'CRM farmacéutico para Matraz Innova',
+  icons: { icon: '/favicon.svg', shortcut: '/favicon.svg' },
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="es" className={inter.variable}>
       <head>
+        <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
         <link
