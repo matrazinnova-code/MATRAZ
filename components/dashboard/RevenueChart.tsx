@@ -9,7 +9,8 @@ interface RevenueChartProps {
 export default function RevenueChart({ healthcare, it, business }: RevenueChartProps) {
   const W = 760, H = 240, P = 28
   const totals = healthcare.map((_, i) => healthcare[i] + it[i] + business[i])
-  const max = Math.max(...totals) * 1.12
+  const maxRaw = Math.max(...totals)
+  const max = maxRaw > 0 ? maxRaw * 1.12 : 10 // avoid divide-by-zero when no data
   const dx = (W - P * 2) / (MONTHS.length - 1)
   const ny = (v: number) => H - P - (v / max) * (H - P * 2)
 

@@ -75,11 +75,16 @@ export default async function DashboardPage() {
 
   const safeActivities = (activities ?? []) as Activity[]
 
-  // Static monthly revenue series (static fallback)
-  const revSeries = {
-    healthcare: [120,168,152,210,244,220,265,290,310,335,358,392],
-    it:         [88,102,134,158,180,196,215,240,268,290,312,348],
-    business:   [54,71,82,95,108,122,130,142,155,168,176,192],
+  // Real monthly revenue from won deals (current year)
+  const currentYear = new Date().getFullYear()
+  const wonDeals = safeDeals.filter((d) => d.stage === 'won')
+  const revSeries = { healthcare: Array(12).fill(0), it: Array(12).fill(0), business: Array(12).fill(0) }
+  for (const d of wonDeals) {
+    const date = new Date(d.updated_at ?? d.created_at)
+    if (date.getFullYear() !== currentYear) continue
+    const month = date.getMonth()
+    const v = d.vertical as 'healthcare' | 'it' | 'business'
+    if (revSeries[v]) revSeries[v][month] += Math.round(d.value / 1000)
   }
 
   const fmt = (v: number) =>
@@ -114,17 +119,17 @@ export default async function DashboardPage() {
         <KpiCard
           label="Revenue cerrado"
           value={fmt(totalRevenue)}
-          delta={18.4}
-          deltaLabel="vs. trimestre anterior"
+          delta={null}
+          deltaLabel={wonCount > 0 ? `${wonCount} deal${wonCount !== 1 ? 's' : ''} cerrado${wonCount !== 1 ? 's' : ''}` : 'Sin deals cerrados aún'}
           icon={<IcWallet size={16} />}
-          points={SPARKS.revenue}
+          points={revSeries.healthcare.map((v, i) => v + revSeries.it[i] + revSeries.business[i])}
           gradientId="sp1"
         />
         <KpiCard
           label="Deals activos"
           value={String(activeDeals)}
-          delta={12.0}
-          deltaLabel="este trimestre"
+          delta={null}
+          deltaLabel={`${safeDeals.length} deal${safeDeals.length !== 1 ? 's' : ''} en total`}
           icon={<IcBrief size={16} />}
           points={SPARKS.deals}
           gradientId="sp2"
@@ -132,17 +137,17 @@ export default async function DashboardPage() {
         <KpiCard
           label="Tasa de cierre"
           value={`${closeRate.toFixed(1)}%`}
-          delta={3.2}
-          deltaLabel="vs. media histórica"
+          delta={null}
+          deltaLabel={safeDeals.length > 0 ? `${wonCount} de ${safeDeals.length} deals` : 'Sin datos aún'}
           icon={<IcTarget size={16} />}
           points={SPARKS.close}
           gradientId="sp3"
         />
         <KpiCard
-          label="Próximas actividades"
+          label="Actividades recientes"
           value={String(safeActivities.length)}
-          delta={-4.5}
-          deltaLabel="vs. semana anterior"
+          delta={null}
+          deltaLabel="últimas registradas"
           icon={<IcClock size={16} />}
           points={SPARKS.acts}
           gradientId="sp4"

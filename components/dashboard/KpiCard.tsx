@@ -40,7 +40,7 @@ function Sparkline({ points, gradientId }: SparklineProps) {
 interface KpiCardProps {
   label: string
   value: string
-  delta: number
+  delta: number | null
   deltaLabel: string
   icon: React.ReactNode
   points: number[]
@@ -48,7 +48,6 @@ interface KpiCardProps {
 }
 
 export default function KpiCard({ label, value, delta, deltaLabel, icon, points, gradientId }: KpiCardProps) {
-  const up = delta >= 0
   return (
     <div className="card kpi">
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 11, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.16em', fontWeight: 600 }}>
@@ -66,10 +65,16 @@ export default function KpiCard({ label, value, delta, deltaLabel, icon, points,
       <div style={{ fontSize: 30, fontWeight: 700, letterSpacing: '-0.025em', marginTop: 14, lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>
         {value}
       </div>
-      <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4, marginTop: 10, fontSize: 12, fontWeight: 600, color: up ? 'var(--teal)' : 'var(--magenta)' }}>
-        {up ? <IcArrowUp size={12} /> : <IcArrowDown size={12} />}
-        {Math.abs(delta).toFixed(1)}%
-        <span style={{ color: 'var(--muted)', fontWeight: 500, marginLeft: 4 }}>{deltaLabel}</span>
+      <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4, marginTop: 10, fontSize: 12 }}>
+        {delta !== null ? (
+          <>
+            {delta >= 0 ? <IcArrowUp size={12} /> : <IcArrowDown size={12} />}
+            <span style={{ fontWeight: 600, color: delta >= 0 ? 'var(--teal)' : 'var(--magenta)' }}>
+              {Math.abs(delta).toFixed(1)}%
+            </span>
+          </>
+        ) : null}
+        <span style={{ color: 'var(--muted)', fontWeight: 500 }}>{deltaLabel}</span>
       </div>
       <Sparkline points={points} gradientId={gradientId} />
     </div>
