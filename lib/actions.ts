@@ -257,6 +257,19 @@ export async function searchAll(query: string) {
   }
 }
 
+export async function getRecentActivities(limit = 8) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return []
+  const { data } = await supabase
+    .from('activities')
+    .select('id, kind, title, created_at, contact:contacts(id, name)')
+    .eq('user_id', user.id)
+    .order('created_at', { ascending: false })
+    .limit(limit)
+  return data ?? []
+}
+
 // ── ACTIVITIES ────────────────────────────────────────────────────────────────
 
 export async function createActivity(data: {
