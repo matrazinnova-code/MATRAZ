@@ -220,6 +220,43 @@ export async function deleteDeal(id: string) {
   return { success: true }
 }
 
+// ── SEARCH ────────────────────────────────────────────────────────────────────
+
+export async function searchAll(query: string) {
+  if (!query.trim()) return { contacts: [], deals: [], companies: [] }
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { contacts: [], deals: [], companies: [] }
+
+  const q = query.trim()
+  const [{ data: contacts }, { data: deals }, { data: companies }] = await Promise.all([
+    supabase
+      .from('contacts')
+      .select('id, name, role, vertical')
+      .eq('user_id', user.id)
+      .ilike('name', `%${q}%`)
+      .limit(5),
+    supabase
+      .from('deals')
+      .select('id, title, value, stage')
+      .eq('user_id', user.id)
+      .ilike('title', `%${q}%`)
+      .limit(5),
+    supabase
+      .from('companies')
+      .select('id, name, industry')
+      .eq('user_id', user.id)
+      .ilike('name', `%${q}%`)
+      .limit(5),
+  ])
+
+  return {
+    contacts: contacts ?? [],
+    deals: deals ?? [],
+    companies: companies ?? [],
+  }
+}
+
 // ── ACTIVITIES ────────────────────────────────────────────────────────────────
 
 export async function createActivity(data: {
