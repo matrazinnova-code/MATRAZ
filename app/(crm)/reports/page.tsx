@@ -24,15 +24,19 @@ export default async function ReportsPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
-  const [{ data: activities }, { data: deals }, { data: contacts }] = await Promise.all([
-    supabase.from('activities').select('*, contact:contacts(id, name)').eq('user_id', user!.id).order('created_at', { ascending: false }),
+  const [{ data: rawActs }, { data: deals }, { data: contacts }] = await Promise.all([
+    supabase.from('activities').select('*').eq('user_id', user!.id).order('created_at', { ascending: false }),
     supabase.from('deals').select('*').eq('user_id', user!.id),
     supabase.from('contacts').select('id, name, vertical, status, lead_score').eq('user_id', user!.id),
   ])
 
-  const acts = (activities ?? []) as (Activity & { contact: { id: string; name: string } | null })[]
-  const allDeals = (deals ?? []) as Deal[]
   const allContacts = (contacts ?? []) as Contact[]
+  const contactMap = Object.fromEntries(allContacts.map((c) => [c.id, c]))
+  const acts = (rawActs ?? []).map((a: Activity) => ({
+    ...a,
+    contact: a.contact_id ? (contactMap[a.contact_id] ?? null) : null,
+  })) as (Activity & { contact: { id: string; name: string } | null })[]
+  const allDeals = (deals ?? []) as Deal[]
 
   // Activity stats by kind
   const byKind = acts.reduce((acc, a) => {

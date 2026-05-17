@@ -15,15 +15,27 @@ const KIND_META: Record<string, { label: string; color: string; icon: React.Reac
 export default async function ActivitiesPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return null
 
-  // Query via contacts to ensure we get all activities for this user's contacts
-  const { data: activities = [] } = await supabase
-    .from('activities')
-    .select('*, contact:contacts(id, name, vertical)')
-    .order('created_at', { ascending: false })
-    .limit(100)
+  const [{ data: rawActs }, { data: contacts }] = await Promise.all([
+    supabase
+      .from('activities')
+      .select('*')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false })
+      .limit(100),
+    supabase
+      .from('contacts')
+      .select('id, name, vertical')
+      .eq('user_id', user.id),
+  ])
 
-  const list = activities ?? []
+  const contactMap = Object.fromEntries((contacts ?? []).map((c) => [c.id, c]))
+
+  const list = (rawActs ?? []).map((a) => ({
+    ...a,
+    contact: a.contact_id ? (contactMap[a.contact_id] ?? null) : null,
+  }))
 
   // Group by date
   const groups: Record<string, typeof list> = {}
