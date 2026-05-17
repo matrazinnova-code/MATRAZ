@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect, useTransition } from 'react'
+import { createPortal } from 'react-dom'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { VerticalBadge } from '@/components/ui/Badge'
@@ -26,8 +27,10 @@ export default function DealCard({ deal, isDragging, isDragOverlay }: Props) {
   const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: deal.id })
   const [menuOpen, setMenuOpen] = useState(false)
   const [editOpen, setEditOpen] = useState(false)
+  const [menuPos, setMenuPos] = useState({ top: 0, right: 0 })
   const [isPending, startTransition] = useTransition()
   const menuRef = useRef<HTMLDivElement>(null)
+  const btnRef = useRef<HTMLButtonElement>(null)
 
   // Edit form state
   const [eTitle,   setETitle]   = useState(deal.title)
@@ -48,13 +51,10 @@ export default function DealCard({ deal, isDragging, isDragOverlay }: Props) {
 
   useEffect(() => {
     if (!menuOpen) return
-    const handler = (e: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-        setMenuOpen(false)
-      }
-    }
-    document.addEventListener('mousedown', handler)
-    return () => document.removeEventListener('mousedown', handler)
+    const handler = (e: MouseEvent) => { setMenuOpen(false) }
+    // Small delay so the opening click doesn't immediately close it
+    const t = setTimeout(() => document.addEventListener('mousedown', handler), 50)
+    return () => { clearTimeout(t); document.removeEventListener('mousedown', handler) }
   }, [menuOpen])
 
   const fmt = (v: number) =>
@@ -108,51 +108,62 @@ export default function DealCard({ deal, isDragging, isDragOverlay }: Props) {
         {/* ··· menu */}
         <div ref={menuRef} style={{ marginLeft: 'auto', position: 'relative' }}>
           <button
+            ref={btnRef}
             className="icon-btn"
             style={{ width: 22, height: 22, borderColor: 'transparent', background: 'transparent' }}
             onPointerDown={(e) => e.stopPropagation()}
-            onClick={(e) => { e.stopPropagation(); setMenuOpen((o) => !o) }}
+            onClick={(e) => {
+              e.stopPropagation()
+              if (!menuOpen && btnRef.current) {
+                const r = btnRef.current.getBoundingClientRect()
+                setMenuPos({ top: r.bottom + 6, right: window.innerWidth - r.right })
+              }
+              setMenuOpen((o) => !o)
+            }}
           >
             <IcMore size={14} />
           </button>
 
-          {menuOpen && (
-            <div style={{
-              position: 'absolute', right: 0, top: '110%', zIndex: 999,
-              background: 'var(--surface-2)', border: '1px solid var(--border)',
-              borderRadius: 10, padding: '4px 0', minWidth: 150,
-              boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
-            }}>
+          {menuOpen && typeof document !== 'undefined' && createPortal(
+            <div
+              style={{
+                position: 'fixed', top: menuPos.top, right: menuPos.right, zIndex: 9999,
+                background: '#1a1a1e', border: '1px solid rgba(255,255,255,0.12)',
+                borderRadius: 10, padding: '4px 0', minWidth: 160,
+                boxShadow: '0 8px 32px rgba(0,0,0,0.6)',
+              }}
+              onPointerDown={(e) => e.stopPropagation()}
+            >
               <button
-                onPointerDown={(e) => e.stopPropagation()}
                 onClick={(e) => { e.stopPropagation(); setMenuOpen(false); setEditOpen(true) }}
                 style={{
-                  display: 'flex', alignItems: 'center', gap: 8,
-                  width: '100%', padding: '8px 14px',
+                  display: 'flex', alignItems: 'center', gap: 10,
+                  width: '100%', padding: '10px 16px',
                   background: 'none', border: 'none', cursor: 'pointer',
                   color: '#fff', fontSize: 13, textAlign: 'left',
                 }}
-                onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(255,255,255,0.06)')}
+                onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(255,255,255,0.08)')}
                 onMouseLeave={(e) => (e.currentTarget.style.background = 'none')}
               >
                 ✏️ Editar deal
               </button>
+              <div style={{ height: 1, background: 'rgba(255,255,255,0.06)', margin: '2px 0' }} />
               <button
                 disabled={isPending}
-                onPointerDown={(e) => e.stopPropagation()}
-                onClick={(e) => { e.stopPropagation(); handleDelete() }}
+                onClick={(e) => { e.stopPropagation(); setMenuOpen(false); handleDelete() }}
                 style={{
-                  display: 'flex', alignItems: 'center', gap: 8,
-                  width: '100%', padding: '8px 14px',
+                  display: 'flex', alignItems: 'center', gap: 10,
+                  width: '100%', padding: '10px 16px',
                   background: 'none', border: 'none', cursor: 'pointer',
                   color: '#ff6b6b', fontSize: 13, textAlign: 'left',
                 }}
-                onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(255,107,107,0.08)')}
+                onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(255,107,107,0.1)')}
                 onMouseLeave={(e) => (e.currentTarget.style.background = 'none')}
               >
                 {isPending ? 'Eliminando…' : '🗑 Eliminar deal'}
               </button>
-            </div>
+            </div>,
+            document.body
           )}
         </div>
       </div>
