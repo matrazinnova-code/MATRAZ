@@ -64,12 +64,14 @@ export default function EditContactButton({ contact }: { contact: Contact }) {
       {open && (
         <div style={{
           position: 'fixed', inset: 0, zIndex: 200,
-          background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)',
+          background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(4px)',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
+          padding: '20px 16px',
         }} onClick={() => setOpen(false)}>
           <div style={{
             background: 'var(--surface-2)', border: '1px solid var(--border)',
-            borderRadius: 16, padding: 28, width: 480, maxWidth: '95vw',
+            borderRadius: 16, padding: '24px 24px 20px', width: '100%', maxWidth: 480,
+            maxHeight: '90vh', overflowY: 'auto',
           }} onClick={(e) => e.stopPropagation()}>
             <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 20 }}>Editar contacto</div>
 

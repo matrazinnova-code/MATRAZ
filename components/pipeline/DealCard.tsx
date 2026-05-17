@@ -118,7 +118,7 @@ export default function DealCard({ deal, isDragging, isDragOverlay }: Props) {
 
           {menuOpen && (
             <div style={{
-              position: 'absolute', right: 0, top: '110%', zIndex: 50,
+              position: 'absolute', right: 0, top: '110%', zIndex: 999,
               background: 'var(--surface-2)', border: '1px solid var(--border)',
               borderRadius: 10, padding: '4px 0', minWidth: 150,
               boxShadow: '0 8px 24px rgba(0,0,0,0.4)',

@@ -4,7 +4,8 @@ import KpiCard from '@/components/dashboard/KpiCard'
 import RevenueChart from '@/components/dashboard/RevenueChart'
 import PipelineDonut from '@/components/dashboard/PipelineDonut'
 import TopDeals from '@/components/dashboard/TopDeals'
-import { IcWallet, IcBrief, IcTarget, IcClock, IcCalendar, IcPhone, IcMail, IcVideo, IcMessage, IcPlus, IcChevDown } from '@/components/ui/Icons'
+import PeriodFilter from '@/components/dashboard/PeriodFilter'
+import { IcWallet, IcBrief, IcTarget, IcClock, IcCalendar, IcPhone, IcMail, IcVideo, IcMessage, IcPlus } from '@/components/ui/Icons'
 import type { Deal, Activity } from '@/lib/supabase/database.types'
 
 const ACTIVITY_ICONS: Record<string, React.ReactNode> = {
@@ -23,16 +24,22 @@ const SPARKS = {
   acts:    [14,13,12,11,12,10,11,9,10,9,8,8],
 }
 
-export default async function DashboardPage() {
+export default async function DashboardPage({ searchParams }: { searchParams: { period?: string } }) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
-  // Fetch all deals
-  const { data: deals = [] } = await supabase
+  const period = searchParams?.period ?? '90'
+  const periodDays = period === 'all' ? null : parseInt(period) || 90
+  const since = periodDays ? new Date(Date.now() - periodDays * 86_400_000).toISOString() : null
+
+  // Fetch all deals (optionally filtered by period)
+  let query = supabase
     .from('deals')
     .select('*, company:companies(*)')
     .eq('user_id', user!.id)
     .neq('stage', 'lost')
+  if (since) query = query.gte('created_at', since)
+  const { data: deals = [] } = await query
 
   const safeDeals = (deals ?? []) as Deal[]
 
@@ -100,14 +107,12 @@ export default async function DashboardPage() {
           </div>
           <div style={{ color: 'var(--muted)', fontSize: 13.5, marginTop: 6 }}>
             Pipeline activo ·{' '}
-            <b style={{ color: 'var(--teal)' }}>{fmt(pipelineTotal)}</b> en curso · Vista{' '}
-            <b style={{ color: '#fff' }}>Q2 2026</b>
+            <b style={{ color: 'var(--teal)' }}>{fmt(pipelineTotal)}</b> en curso ·{' '}
+            <b style={{ color: '#fff' }}>{period === 'all' ? 'Todo el historial' : `Últimos ${period} días`}</b>
           </div>
         </div>
         <div style={{ display: 'flex', gap: 10 }}>
-          <button className="btn ghost">
-            <IcCalendar size={15} /> Últimos 90 días <IcChevDown size={13} />
-          </button>
+          <PeriodFilter />
           <Link href="/deals/new" className="btn primary">
             <IcPlus size={15} /> Nuevo deal
           </Link>
