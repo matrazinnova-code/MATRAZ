@@ -1,11 +1,10 @@
 'use client'
 
-import { useState, useRef, useEffect, useTransition } from 'react'
-import { createPortal } from 'react-dom'
+import { useState, useTransition } from 'react'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { VerticalBadge } from '@/components/ui/Badge'
-import { IcSparkle, IcMore, IcClock, IcCalendar } from '@/components/ui/Icons'
+import { IcSparkle, IcClock, IcCalendar } from '@/components/ui/Icons'
 import { deleteDeal, updateDeal } from '@/lib/actions'
 import type { Deal, Vertical, DealStage } from '@/lib/supabase/database.types'
 
@@ -25,12 +24,8 @@ interface Props {
 
 export default function DealCard({ deal, isDragging, isDragOverlay }: Props) {
   const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: deal.id })
-  const [menuOpen, setMenuOpen] = useState(false)
   const [editOpen, setEditOpen] = useState(false)
-  const [menuPos, setMenuPos] = useState({ top: 0, right: 0 })
   const [isPending, startTransition] = useTransition()
-  const menuRef = useRef<HTMLDivElement>(null)
-  const btnRef = useRef<HTMLButtonElement>(null)
 
   // Edit form state
   const [eTitle,   setETitle]   = useState(deal.title)
@@ -49,14 +44,6 @@ export default function DealCard({ deal, isDragging, isDragOverlay }: Props) {
         transition,
       }
 
-  useEffect(() => {
-    if (!menuOpen) return
-    const handler = (e: MouseEvent) => { setMenuOpen(false) }
-    // Small delay so the opening click doesn't immediately close it
-    const t = setTimeout(() => document.addEventListener('mousedown', handler), 50)
-    return () => { clearTimeout(t); document.removeEventListener('mousedown', handler) }
-  }, [menuOpen])
-
   const fmt = (v: number) =>
     v >= 1_000_000 ? `€${(v / 1_000_000).toFixed(2)}M` : `€${(v / 1000).toFixed(0)}K`
 
@@ -64,7 +51,6 @@ export default function DealCard({ deal, isDragging, isDragOverlay }: Props) {
   const ageDays = Math.floor((Date.now() - new Date(deal.created_at).getTime()) / 86_400_000)
 
   function handleDelete() {
-    setMenuOpen(false)
     if (!confirm(`¿Eliminar "${deal.title}"?`)) return
     startTransition(() => deleteDeal(deal.id))
   }
@@ -105,66 +91,37 @@ export default function DealCard({ deal, isDragging, isDragOverlay }: Props) {
           </span>
         )}
 
-        {/* ··· menu */}
-        <div ref={menuRef} style={{ marginLeft: 'auto', position: 'relative' }}>
+        {/* Action buttons — always visible, no dropdown */}
+        <div style={{ marginLeft: 'auto', display: 'flex', gap: 4 }}>
           <button
-            ref={btnRef}
-            className="icon-btn"
-            style={{ width: 22, height: 22, borderColor: 'transparent', background: 'transparent' }}
+            title="Editar deal"
             onPointerDown={(e) => e.stopPropagation()}
-            onClick={(e) => {
-              e.stopPropagation()
-              if (!menuOpen && btnRef.current) {
-                const r = btnRef.current.getBoundingClientRect()
-                setMenuPos({ top: r.bottom + 6, right: window.innerWidth - r.right })
-              }
-              setMenuOpen((o) => !o)
+            onClick={(e) => { e.stopPropagation(); setEditOpen(true) }}
+            style={{
+              width: 22, height: 22, borderRadius: 5, border: '1px solid transparent',
+              background: 'transparent', cursor: 'pointer', color: 'var(--muted)',
+              display: 'grid', placeItems: 'center', fontSize: 12, transition: '120ms',
             }}
+            onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--teal)'; e.currentTarget.style.background = 'rgba(0,212,170,0.12)'; e.currentTarget.style.borderColor = 'rgba(0,212,170,0.3)' }}
+            onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--muted)'; e.currentTarget.style.background = 'transparent'; e.currentTarget.style.borderColor = 'transparent' }}
           >
-            <IcMore size={14} />
+            ✏️
           </button>
-
-          {menuOpen && typeof document !== 'undefined' && createPortal(
-            <div
-              style={{
-                position: 'fixed', top: menuPos.top, right: menuPos.right, zIndex: 9999,
-                background: '#1a1a1e', border: '1px solid rgba(255,255,255,0.12)',
-                borderRadius: 10, padding: '4px 0', minWidth: 160,
-                boxShadow: '0 8px 32px rgba(0,0,0,0.6)',
-              }}
-              onPointerDown={(e) => e.stopPropagation()}
-            >
-              <button
-                onClick={(e) => { e.stopPropagation(); setMenuOpen(false); setEditOpen(true) }}
-                style={{
-                  display: 'flex', alignItems: 'center', gap: 10,
-                  width: '100%', padding: '10px 16px',
-                  background: 'none', border: 'none', cursor: 'pointer',
-                  color: '#fff', fontSize: 13, textAlign: 'left',
-                }}
-                onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(255,255,255,0.08)')}
-                onMouseLeave={(e) => (e.currentTarget.style.background = 'none')}
-              >
-                ✏️ Editar deal
-              </button>
-              <div style={{ height: 1, background: 'rgba(255,255,255,0.06)', margin: '2px 0' }} />
-              <button
-                disabled={isPending}
-                onClick={(e) => { e.stopPropagation(); setMenuOpen(false); handleDelete() }}
-                style={{
-                  display: 'flex', alignItems: 'center', gap: 10,
-                  width: '100%', padding: '10px 16px',
-                  background: 'none', border: 'none', cursor: 'pointer',
-                  color: '#ff6b6b', fontSize: 13, textAlign: 'left',
-                }}
-                onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(255,107,107,0.1)')}
-                onMouseLeave={(e) => (e.currentTarget.style.background = 'none')}
-              >
-                {isPending ? 'Eliminando…' : '🗑 Eliminar deal'}
-              </button>
-            </div>,
-            document.body
-          )}
+          <button
+            title="Eliminar deal"
+            disabled={isPending}
+            onPointerDown={(e) => e.stopPropagation()}
+            onClick={(e) => { e.stopPropagation(); handleDelete() }}
+            style={{
+              width: 22, height: 22, borderRadius: 5, border: '1px solid transparent',
+              background: 'transparent', cursor: 'pointer', color: 'var(--muted)',
+              display: 'grid', placeItems: 'center', fontSize: 12, transition: '120ms',
+            }}
+            onMouseEnter={(e) => { e.currentTarget.style.color = '#ff6b6b'; e.currentTarget.style.background = 'rgba(255,107,107,0.1)'; e.currentTarget.style.borderColor = 'rgba(255,107,107,0.3)' }}
+            onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--muted)'; e.currentTarget.style.background = 'transparent'; e.currentTarget.style.borderColor = 'transparent' }}
+          >
+            🗑
+          </button>
         </div>
       </div>
 
