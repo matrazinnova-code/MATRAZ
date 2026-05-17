@@ -278,6 +278,14 @@ body {
 .k-card:hover { border-color: rgba(0,212,170,0.35); box-shadow: 0 4px 16px rgba(0,0,0,0.25); }
 .k-card.dragging { opacity: 0.4; cursor: grabbing; }
 
+/* Activity contact link */
+.act-contact-link {
+  color: var(--muted);
+  text-decoration: none;
+  transition: color 120ms;
+}
+.act-contact-link:hover { color: var(--teal); }
+
 /* Timeline */
 .timeline {
   position: relative;

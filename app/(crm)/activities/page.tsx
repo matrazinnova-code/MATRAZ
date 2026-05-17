@@ -132,9 +132,7 @@ export default async function ActivitiesPage() {
                               <span>·</span>
                               <Link
                                 href={`/contacts/${a.contact.id}`}
-                                style={{ color: 'var(--muted)', textDecoration: 'none' }}
-                                onMouseEnter={(e: any) => e.currentTarget.style.color = 'var(--teal)'}
-                                onMouseLeave={(e: any) => e.currentTarget.style.color = 'var(--muted)'}
+                                className="act-contact-link"
                               >
                                 {a.contact.name}
                               </Link>
