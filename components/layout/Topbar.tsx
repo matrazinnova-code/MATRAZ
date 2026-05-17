@@ -3,7 +3,8 @@
 import { usePathname, useRouter } from 'next/navigation'
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { IcSearch, IcPlus, IcBell, IcCalendar, IcChevRight, IcUsers, IcBrief, IcBuilding, IcPhone, IcMail, IcVideo, IcMessage, IcCheck, IcDoc } from '@/components/ui/Icons'
-import { searchAll, getRecentActivities } from '@/lib/actions'
+import { getRecentActivities } from '@/lib/actions'
+import { createClient } from '@/lib/supabase/client'
 
 const BREADCRUMBS: Record<string, [string, string]> = {
   '/':           ['Workspace', 'Dashboard'],
@@ -16,7 +17,7 @@ const BREADCRUMBS: Record<string, [string, string]> = {
   '/settings':   ['Operaciones', 'Ajustes'],
 }
 
-type Results = Awaited<ReturnType<typeof searchAll>>
+type Results = { contacts: { id: string; name: string; role: string | null; vertical: string }[]; deals: { id: string; title: string; value: number; stage: string }[]; companies: { id: string; name: string; industry: string | null }[] }
 
 export default function Topbar() {
   const pathname = usePathname()
@@ -86,8 +87,16 @@ export default function Topbar() {
     setLoading(true)
     setOpen(true)
     timerRef.current = setTimeout(async () => {
-      const res = await searchAll(val)
-      setResults(res)
+      const supabase = createClient()
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) { setLoading(false); return }
+      const q = val.trim()
+      const [{ data: contacts }, { data: deals }, { data: companies }] = await Promise.all([
+        supabase.from('contacts').select('id, name, role, vertical').eq('user_id', user.id).ilike('name', `%${q}%`).limit(5),
+        supabase.from('deals').select('id, title, value, stage').eq('user_id', user.id).ilike('title', `%${q}%`).limit(5),
+        supabase.from('companies').select('id, name, industry').eq('user_id', user.id).ilike('name', `%${q}%`).limit(5),
+      ])
+      setResults({ contacts: contacts ?? [], deals: deals ?? [], companies: companies ?? [] })
       setLoading(false)
     }, 260)
   }, [])
